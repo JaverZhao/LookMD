@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Sun, Moon, FileUp, Search } from 'lucide-react'
+import { Sun, Moon, FileUp, Search, Settings } from 'lucide-react'
 import { IconButton } from '../ui/IconButton'
 import { SearchBox } from '../search/SearchBox'
 
@@ -8,6 +8,7 @@ interface TopBarProps {
   onToggleTheme: () => void
   fileName?: string
   onOpenFile: () => void
+  onOpenSettings: () => void
   searchProps: {
     query: string
     isOpen: boolean
@@ -22,7 +23,7 @@ interface TopBarProps {
   }
 }
 
-export function TopBar({ theme, onToggleTheme, fileName, onOpenFile, searchProps }: TopBarProps) {
+export function TopBar({ theme, onToggleTheme, fileName, onOpenFile, onOpenSettings, searchProps }: TopBarProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -87,6 +88,9 @@ export function TopBar({ theme, onToggleTheme, fileName, onOpenFile, searchProps
         </IconButton>
         <IconButton onClick={onOpenFile} tooltip="打开文件">
           <FileUp size={18} />
+        </IconButton>
+        <IconButton onClick={onOpenSettings} tooltip="阅读设置">
+          <Settings size={18} />
         </IconButton>
         <IconButton onClick={onToggleTheme} tooltip="切换主题">
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

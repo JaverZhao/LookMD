@@ -4,6 +4,7 @@ import { useMarkdownFile } from '../hooks/useMarkdownFile'
 import { useRecentFiles } from '../hooks/useRecentFiles'
 import { useToc } from '../hooks/useToc'
 import { useFileSearch } from '../hooks/useFileSearch'
+import { useReaderSettings } from '../hooks/useReaderSettings'
 import { AppShell } from '../components/layout/AppShell'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   const { recentFiles, addRecent, removeRecent } = useRecentFiles()
   const tocItems = useToc(file?.content ?? null)
   const search = useFileSearch()
+  const { settings, updateSetting, resetSettings } = useReaderSettings()
 
   const handleOpenFile = useCallback(async () => {
     const result = await openFile()
@@ -73,6 +75,9 @@ function App() {
         open: search.open,
       }}
       onSearchMatchInfo={handleSearchMatchInfo}
+      settings={settings}
+      onUpdateSetting={updateSetting}
+      onResetSettings={resetSettings}
     />
   )
 }

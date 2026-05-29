@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, useCallback } from 'react'
 import { renderMarkdown } from '../../lib/markdown'
 import { highlightCode } from '../../lib/highlight'
 import { useTheme } from '../../hooks/useTheme'
+import type { ReaderSettings } from '../../types/settings'
 
 interface MarkdownViewerProps {
   content: string
@@ -9,6 +10,7 @@ interface MarkdownViewerProps {
   searchQuery?: string
   searchCurrentMatch?: number
   onMatchInfo?: (total: number) => void
+  settings: ReaderSettings
 }
 
 export function MarkdownViewer({
@@ -17,6 +19,7 @@ export function MarkdownViewer({
   searchQuery,
   searchCurrentMatch,
   onMatchInfo,
+  settings,
 }: MarkdownViewerProps) {
   const { resolved } = useTheme()
   const html = useMemo(() => renderMarkdown(content, filePath), [content, filePath])
@@ -88,14 +91,6 @@ export function MarkdownViewer({
 
     if (matches.length === 0) return
 
-    const ranges: { start: Node; end: Node }[] = []
-    for (const { node, offset } of matches) {
-      const range = document.createRange()
-      range.setStart(node, offset)
-      range.setEnd(node, offset + query.length)
-      ranges.push({ start: range.startContainer, end: range.endContainer })
-    }
-
     for (const { node, offset } of matches) {
       const range = document.createRange()
       range.setStart(node, offset)
@@ -137,10 +132,21 @@ export function MarkdownViewer({
     highlightSearch()
   }, [highlightSearch])
 
+  const containerStyle = useMemo(() => {
+    const maxWidth = settings.contentWidth === 'auto' ? '100%' : `${settings.contentWidth}px`
+    return {
+      fontFamily: settings.fontFamily,
+      fontSize: `${settings.fontSize}%`,
+      lineHeight: `${settings.lineHeight}%`,
+      maxWidth,
+    }
+  }, [settings])
+
   return (
     <div
       ref={containerRef}
-      className="md-content w-full max-w-[900px] mx-auto px-8 py-8"
+      className="md-content w-full mx-auto px-8 py-8"
+      style={containerStyle}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

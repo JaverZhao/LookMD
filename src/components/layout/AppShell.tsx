@@ -4,10 +4,12 @@ import type { MarkdownFile } from '../../types/file'
 import type { AppStatus } from '../../hooks/useMarkdownFile'
 import type { RecentFileItem } from '../../types/file'
 import type { TocItem } from '../../types/markdown'
+import type { ReaderSettings } from '../../types/settings'
 import { TopBar } from './TopBar'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { MarkdownViewer } from '../markdown/MarkdownViewer'
+import { SettingsDialog } from '../settings/SettingsDialog'
 import { Toast } from '../ui/Toast'
 import { isMarkdownFile } from '../../lib/file'
 
@@ -36,6 +38,9 @@ interface AppShellProps {
     open: () => void
   }
   onSearchMatchInfo: (total: number) => void
+  settings: ReaderSettings
+  onUpdateSetting: <K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) => void
+  onResetSettings: () => void
 }
 
 export function AppShell({
@@ -52,9 +57,13 @@ export function AppShell({
   tocItems,
   searchProps,
   onSearchMatchInfo,
+  settings,
+  onUpdateSetting,
+  onResetSettings,
 }: AppShellProps) {
   const [dragOver, setDragOver] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     const appWindow = getCurrentWindow()
@@ -92,6 +101,7 @@ export function AppShell({
         onToggleTheme={onToggleTheme}
         fileName={file?.name}
         onOpenFile={onOpenFile}
+        onOpenSettings={() => setSettingsOpen(true)}
         searchProps={searchProps}
       />
 
@@ -130,6 +140,7 @@ export function AppShell({
               searchQuery={searchProps.query}
               searchCurrentMatch={searchProps.currentMatch}
               onMatchInfo={onSearchMatchInfo}
+              settings={settings}
             />
           ) : (
             <div className="text-center max-w-md px-8">
@@ -174,6 +185,14 @@ export function AppShell({
       </div>
 
       <StatusBar file={file} status={status} />
+
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onUpdate={onUpdateSetting}
+        onReset={onResetSettings}
+      />
 
       <Toast
         message={toast?.message ?? null}
