@@ -11,6 +11,8 @@
   --color-border-secondary: #d1d5db;
   --color-accent: #3b82f6;
   --color-accent-hover: #2563eb;
+  --color-accent-dark: #60a5fa;
+  --color-accent-hover-dark: #3b82f6;
 }
 
 .dark {
@@ -22,8 +24,8 @@
   --color-text-tertiary: #6b7280;
   --color-border-primary: #374151;
   --color-border-secondary: #4b5563;
-  --color-accent: #60a5fa;
-  --color-accent-hover: #3b82f6;
+  --color-accent: var(--color-accent-dark);
+  --color-accent-hover: var(--color-accent-hover-dark);
 }
 
 html {

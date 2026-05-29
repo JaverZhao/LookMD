@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReaderSettings } from '../../types/settings'
 import { Modal } from '../ui/Modal'
 
@@ -16,6 +16,15 @@ const COMMON_FONTS = [
   { label: 'Source Han Serif SC', value: '"Source Han Serif SC", serif' },
 ]
 
+const PRESET_COLORS = [
+  { label: '默认蓝', value: '#3b82f6' },
+  { label: '翡翠绿', value: '#10b981' },
+  { label: '紫色', value: '#8b5cf6' },
+  { label: '琥珀橙', value: '#f59e0b' },
+  { label: '珊瑚红', value: '#ef4444' },
+  { label: '青绿', value: '#14b8a6' },
+]
+
 interface SettingsDialogProps {
   open: boolean
   onClose: () => void
@@ -25,6 +34,8 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: SettingsDialogProps) {
+  const [customHex, setCustomHex] = useState(settings.themeColor)
+
   const previewStyle = useMemo(
     () => ({
       fontFamily: settings.fontFamily,
@@ -36,6 +47,62 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
 
   return (
     <Modal open={open} onClose={onClose} title="阅读设置">
+      {/* Theme color */}
+      <div>
+        <label
+          className="block text-xs font-medium mb-2"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          主题色
+        </label>
+        <div className="flex gap-2 mb-2">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c.value}
+              title={c.label}
+              className="w-7 h-7 rounded-full cursor-pointer border-2 transition-transform duration-100"
+              style={{
+                backgroundColor: c.value,
+                borderColor: settings.themeColor === c.value ? 'var(--color-text-primary)' : 'transparent',
+                transform: settings.themeColor === c.value ? 'scale(1.15)' : 'scale(1)',
+              }}
+              onClick={() => { onUpdate('themeColor', c.value); setCustomHex(c.value) }}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={customHex}
+            onChange={(e) => {
+              setCustomHex(e.target.value)
+              if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                onUpdate('themeColor', e.target.value)
+              }
+            }}
+            onBlur={() => {
+              if (!/^#[0-9a-fA-F]{6}$/.test(customHex)) {
+                setCustomHex(settings.themeColor)
+              }
+            }}
+            placeholder="#3b82f6"
+            className="w-24 px-2 py-1.5 rounded-lg text-xs outline-none border"
+            style={{
+              color: 'var(--color-text-primary)',
+              backgroundColor: 'var(--color-bg-primary)',
+              borderColor: 'var(--color-border-primary)',
+            }}
+          />
+          <div
+            className="w-7 h-7 rounded-full border"
+            style={{ backgroundColor: settings.themeColor, borderColor: 'var(--color-border-primary)' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+            输入十六进制色号
+          </span>
+        </div>
+      </div>
+
       {/* Font family */}
       <div>
         <label
@@ -83,7 +150,7 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
           step={5}
           value={settings.fontSize}
           onChange={(e) => onUpdate('fontSize', Number(e.target.value))}
-          className="w-full"
+          className="w-full accent-[var(--color-accent)]"
         />
         <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
           <span>50%</span>
@@ -112,7 +179,7 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
           step={5}
           value={settings.lineHeight}
           onChange={(e) => onUpdate('lineHeight', Number(e.target.value))}
-          className="w-full"
+          className="w-full accent-[var(--color-accent)]"
         />
         <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
           <span>100%</span>
@@ -152,7 +219,7 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
             step={20}
             value={settings.contentWidth}
             onChange={(e) => onUpdate('contentWidth', Number(e.target.value))}
-            className="w-full mt-2"
+            className="w-full mt-2 accent-[var(--color-accent)]"
           />
         )}
       </div>
