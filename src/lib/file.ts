@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog'
-import { readTextFile } from '@tauri-apps/plugin-fs'
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import type { MarkdownFile } from '../types/file'
 
 const MARKDOWN_EXTENSIONS = ['.md', '.markdown', '.mdown']
@@ -41,4 +41,8 @@ export async function readMarkdownFile(path: string): Promise<MarkdownFile> {
     content,
     lastOpenedAt: Date.now(),
   }
+}
+
+export async function saveMarkdownFile(path: string, content: string): Promise<void> {
+  await writeTextFile(path, content)
 }

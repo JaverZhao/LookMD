@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { MarkdownFile } from '../../types/file'
 import type { AppStatus } from '../../hooks/useMarkdownFile'
@@ -9,6 +9,7 @@ import { TopBar } from './TopBar'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { MarkdownViewer } from '../markdown/MarkdownViewer'
+import { MarkdownEditor } from '../markdown/MarkdownEditor'
 import { SettingsDialog } from '../settings/SettingsDialog'
 import { Toast } from '../ui/Toast'
 import { isMarkdownFile } from '../../lib/file'
@@ -41,6 +42,19 @@ interface AppShellProps {
   settings: ReaderSettings
   onUpdateSetting: <K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) => void
   onResetSettings: () => void
+  editProps: {
+    isEditing: boolean
+    editContent: string
+    canUndo: boolean
+    canRedo: boolean
+    isModified: boolean
+    onStartEditing: () => void
+    onStopEditing: () => void
+    onEditContentChange: (content: string) => void
+    onUndo: () => void
+    onRedo: () => void
+    onSave: (path: string, content: string) => Promise<void>
+  }
 }
 
 export function AppShell({
@@ -60,6 +74,7 @@ export function AppShell({
   settings,
   onUpdateSetting,
   onResetSettings,
+  editProps,
 }: AppShellProps) {
   const [dragOver, setDragOver] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
@@ -94,6 +109,24 @@ export function AppShell({
     }
   }, [onOpenPath])
 
+  const handleToggleEdit = useCallback(() => {
+    if (editProps.isEditing) {
+      editProps.onStopEditing()
+    } else {
+      editProps.onStartEditing()
+    }
+  }, [editProps])
+
+  const handleSave = useCallback(async () => {
+    if (!file) return
+    try {
+      await editProps.onSave(file.path, editProps.editContent)
+      setToast({ message: '保存成功', type: 'info' })
+    } catch {
+      setToast({ message: '保存失败', type: 'error' })
+    }
+  }, [file, editProps])
+
   return (
     <div className="flex flex-col h-screen">
       <TopBar
@@ -102,6 +135,9 @@ export function AppShell({
         fileName={file?.name}
         onOpenFile={onOpenFile}
         onOpenSettings={() => setSettingsOpen(true)}
+        isEditing={editProps.isEditing}
+        onToggleEdit={handleToggleEdit}
+        hasFile={!!file}
         searchProps={searchProps}
       />
 
@@ -111,10 +147,18 @@ export function AppShell({
           onRecentClick={onRecentClick}
           onRecentRemove={onRecentRemove}
           tocItems={tocItems}
+          isEditing={editProps.isEditing}
+          canUndo={editProps.canUndo}
+          canRedo={editProps.canRedo}
+          isModified={editProps.isModified}
+          onSave={handleSave}
+          onUndo={editProps.onUndo}
+          onRedo={editProps.onRedo}
+          onCancelEdit={editProps.onStopEditing}
         />
 
         <main
-          className={`flex-1 overflow-y-auto flex relative ${file ? 'items-start' : 'items-center justify-center'}`}
+          className={`flex-1 overflow-y-auto flex relative ${file && !editProps.isEditing ? 'items-start' : (file && editProps.isEditing ? '' : 'items-center justify-center')}`}
           style={{
             backgroundColor: 'var(--color-bg-primary)',
           }}
@@ -133,7 +177,13 @@ export function AppShell({
             </div>
           )}
 
-          {file ? (
+          {file && editProps.isEditing ? (
+            <MarkdownEditor
+              content={editProps.editContent}
+              onChange={editProps.onEditContentChange}
+              settings={settings}
+            />
+          ) : file ? (
             <MarkdownViewer
               content={file.content}
               filePath={file.path}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { History, ListTree } from 'lucide-react'
+import { History, ListTree, Save, Undo2, Redo2, X } from 'lucide-react'
 import type { RecentFileItem } from '../../types/file'
 import type { TocItem } from '../../types/markdown'
 import { MarkdownToc } from '../markdown/MarkdownToc'
@@ -11,10 +11,80 @@ interface SidebarProps {
   onRecentClick: (path: string) => void
   onRecentRemove: (path: string) => void
   tocItems: TocItem[]
+  isEditing: boolean
+  canUndo: boolean
+  canRedo: boolean
+  isModified: boolean
+  onSave: () => void
+  onUndo: () => void
+  onRedo: () => void
+  onCancelEdit: () => void
 }
 
-export function Sidebar({ recentFiles, onRecentClick, onRecentRemove, tocItems }: SidebarProps) {
+export function Sidebar({ recentFiles, onRecentClick, onRecentRemove, tocItems, isEditing, canUndo, canRedo, isModified, onSave, onUndo, onRedo, onCancelEdit }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('toc')
+
+  if (isEditing) {
+    return (
+      <aside
+        className="w-[280px] flex-shrink-0 border-r flex flex-col"
+        style={{
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderColor: 'var(--color-border-primary)',
+        }}
+      >
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 pt-8">
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-white transition-colors duration-150 cursor-pointer"
+            style={{ backgroundColor: isModified ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}
+            disabled={!isModified}
+            onClick={onSave}
+          >
+            <Save size={16} />
+            保存
+          </button>
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer"
+            style={{
+              color: canUndo ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+              border: '1px solid var(--color-border-primary)',
+              opacity: canUndo ? 1 : 0.5,
+            }}
+            disabled={!canUndo}
+            onClick={onUndo}
+          >
+            <Undo2 size={16} />
+            撤销
+          </button>
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer"
+            style={{
+              color: canRedo ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+              border: '1px solid var(--color-border-primary)',
+              opacity: canRedo ? 1 : 0.5,
+            }}
+            disabled={!canRedo}
+            onClick={onRedo}
+          >
+            <Redo2 size={16} />
+            重做
+          </button>
+          <div className="flex-1" />
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium cursor-pointer mb-6"
+            style={{
+              color: 'var(--color-text-tertiary)',
+              border: '1px solid var(--color-border-primary)',
+            }}
+            onClick={onCancelEdit}
+          >
+            <X size={16} />
+            退出编辑
+          </button>
+        </div>
+      </aside>
+    )
+  }
 
   return (
     <aside

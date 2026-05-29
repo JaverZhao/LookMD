@@ -5,6 +5,8 @@ import { useRecentFiles } from '../hooks/useRecentFiles'
 import { useToc } from '../hooks/useToc'
 import { useFileSearch } from '../hooks/useFileSearch'
 import { useReaderSettings } from '../hooks/useReaderSettings'
+import { useEditMode } from '../hooks/useEditMode'
+import { saveMarkdownFile } from '../lib/file'
 import { AppShell } from '../components/layout/AppShell'
 
 function App() {
@@ -14,6 +16,7 @@ function App() {
   const tocItems = useToc(file?.content ?? null)
   const search = useFileSearch()
   const { settings, updateSetting, resetSettings } = useReaderSettings()
+  const edit = useEditMode(file?.content ?? '')
 
   const handleOpenFile = useCallback(async () => {
     const result = await openFile()
@@ -49,6 +52,14 @@ function App() {
     [search]
   )
 
+  const handleSave = useCallback(
+    async (path: string, content: string) => {
+      await saveMarkdownFile(path, content)
+      await readFile(path)
+    },
+    [readFile]
+  )
+
   return (
     <AppShell
       theme={resolved}
@@ -78,6 +89,19 @@ function App() {
       settings={settings}
       onUpdateSetting={updateSetting}
       onResetSettings={resetSettings}
+      editProps={{
+        isEditing: edit.isEditing,
+        editContent: edit.content,
+        canUndo: edit.canUndo,
+        canRedo: edit.canRedo,
+        isModified: edit.isModified,
+        onStartEditing: edit.startEditing,
+        onStopEditing: edit.stopEditing,
+        onEditContentChange: edit.updateContent,
+        onUndo: edit.undo,
+        onRedo: edit.redo,
+        onSave: handleSave,
+      }}
     />
   )
 }
