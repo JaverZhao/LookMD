@@ -1,0 +1,25 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+src-tauri/target/
+
+*~
+
+*.sw?
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# txt
+*.txt
