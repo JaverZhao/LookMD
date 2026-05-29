@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { MarkdownFile } from '../../types/file'
 import type { AppStatus } from '../../hooks/useMarkdownFile'
@@ -79,6 +79,8 @@ export function AppShell({
   const [dragOver, setDragOver] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const mainRef = useRef<HTMLDivElement>(null)
+  const [scrollRatio, setScrollRatio] = useState(0)
 
   useEffect(() => {
     const appWindow = getCurrentWindow()
@@ -113,6 +115,11 @@ export function AppShell({
     if (editProps.isEditing) {
       editProps.onStopEditing()
     } else {
+      if (mainRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = mainRef.current
+        const ratio = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0
+        setScrollRatio(ratio)
+      }
       editProps.onStartEditing()
     }
   }, [editProps])
@@ -158,6 +165,7 @@ export function AppShell({
         />
 
         <main
+          ref={mainRef}
           className={`flex-1 overflow-y-auto flex relative ${file && !editProps.isEditing ? 'items-start' : (file && editProps.isEditing ? '' : 'items-center justify-center')}`}
           style={{
             backgroundColor: 'var(--color-bg-primary)',
@@ -182,6 +190,7 @@ export function AppShell({
               content={editProps.editContent}
               onChange={editProps.onEditContentChange}
               settings={settings}
+              scrollRatio={scrollRatio}
             />
           ) : file ? (
             <MarkdownViewer

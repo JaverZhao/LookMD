@@ -5,10 +5,12 @@ interface MarkdownEditorProps {
   content: string
   onChange: (content: string) => void
   settings: ReaderSettings
+  scrollRatio?: number
 }
 
-export function MarkdownEditor({ content, onChange, settings }: MarkdownEditorProps) {
+export function MarkdownEditor({ content, onChange, settings, scrollRatio = 0 }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const restoredRef = useRef(false)
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -32,7 +34,14 @@ export function MarkdownEditor({ content, onChange, settings }: MarkdownEditorPr
     const ta = textareaRef.current
     if (!ta) return
     ta.focus()
-  }, [])
+
+    if (!restoredRef.current && scrollRatio > 0) {
+      restoredRef.current = true
+      const targetLine = Math.floor(content.length * scrollRatio)
+      ta.selectionStart = ta.selectionEnd = targetLine
+      ta.scrollTop = (ta.scrollHeight - ta.clientHeight) * scrollRatio
+    }
+  }, [content, scrollRatio])
 
   return (
     <textarea
