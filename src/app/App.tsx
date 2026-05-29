@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useTheme } from '../hooks/useTheme'
 import { useMarkdownFile } from '../hooks/useMarkdownFile'
 import { useRecentFiles } from '../hooks/useRecentFiles'
@@ -6,7 +7,7 @@ import { useToc } from '../hooks/useToc'
 import { useFileSearch } from '../hooks/useFileSearch'
 import { useReaderSettings } from '../hooks/useReaderSettings'
 import { useEditMode } from '../hooks/useEditMode'
-import { saveMarkdownFile } from '../lib/file'
+import { saveMarkdownFile, isMarkdownFile } from '../lib/file'
 import { AppShell } from '../components/layout/AppShell'
 
 function App() {
@@ -59,6 +60,15 @@ function App() {
     },
     [readFile]
   )
+
+  useEffect(() => {
+    invoke<string | null>('get_pending_file').then((path) => {
+      if (!path || !isMarkdownFile(path)) return
+      readFile(path).then((result) => {
+        if (result) addRecent(result)
+      })
+    })
+  }, [readFile, addRecent])
 
   return (
     <AppShell
