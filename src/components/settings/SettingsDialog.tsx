@@ -111,23 +111,42 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
         >
           字体
         </label>
-        <select
+        {(() => {
+          const isCustom = !COMMON_FONTS.some((f) => f.value === settings.fontFamily)
+          return (
+            <select
+              value={isCustom ? '__custom__' : settings.fontFamily}
+              onChange={(e) => {
+                if (e.target.value !== '__custom__') onUpdate('fontFamily', e.target.value)
+              }}
+              className="w-full px-3 py-2 rounded-xl text-sm outline-none border cursor-pointer"
+              style={{
+                color: 'var(--color-text-primary)',
+                backgroundColor: 'var(--color-bg-primary)',
+                borderColor: 'var(--color-border-primary)',
+                fontFamily: settings.fontFamily,
+              }}
+            >
+              {isCustom && <option value="__custom__">自定义字体</option>}
+              {COMMON_FONTS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          )
+        })()}
+        <input
+          type="text"
           value={settings.fontFamily}
           onChange={(e) => onUpdate('fontFamily', e.target.value)}
-          className="w-full px-3 py-2 rounded-xl text-sm outline-none border cursor-pointer"
+          placeholder="或输入自定义字体名称..."
+          className="w-full px-3 py-2 rounded-xl text-sm outline-none border mt-2"
           style={{
             color: 'var(--color-text-primary)',
             backgroundColor: 'var(--color-bg-primary)',
             borderColor: 'var(--color-border-primary)',
             fontFamily: settings.fontFamily,
           }}
-        >
-          {COMMON_FONTS.map((f) => (
-            <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* Font size */}
