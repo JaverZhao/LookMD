@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { Search, X, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface SearchBoxProps {
@@ -24,6 +24,13 @@ export function SearchBox({
   onNext,
   onPrev,
 }: SearchBoxProps) {
+  const composingRef = useRef(false)
+  const [inputValue, setInputValue] = useState(query)
+
+  useEffect(() => {
+    setInputValue(query)
+  }, [query, isOpen])
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -62,8 +69,18 @@ export function SearchBox({
       <input
         ref={inputRef}
         type="text"
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value)
+          if (!composingRef.current) onQueryChange(e.target.value)
+        }}
+        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionEnd={(e) => {
+          composingRef.current = false
+          const value = (e.target as HTMLInputElement).value
+          setInputValue(value)
+          onQueryChange(value)
+        }}
         onKeyDown={handleKeyDown}
         placeholder="搜索..."
         className="w-40 bg-transparent text-sm outline-none border-none"
