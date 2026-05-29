@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useCallback } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import { renderMarkdown } from '../../lib/markdown'
 import { highlightCode } from '../../lib/highlight'
 import { useTheme } from '../../hooks/useTheme'
@@ -13,6 +13,27 @@ interface MarkdownViewerProps {
   settings: ReaderSettings
 }
 
+function highlightInHtml(html: string, query: string): { html: string; count: number } {
+  if (!query) return { html, count: 0 }
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escaped, 'gi')
+  let count = 0
+
+  const result = html.replace(
+    /(>|^)([^<]+)(?=<|$)/g,
+    (_, prefix: string, text: string) => {
+      const highlighted = text.replace(regex, (match) => {
+        count++
+        return `<mark class="search-highlight">${match}</mark>`
+      })
+      return prefix + highlighted
+    }
+  )
+
+  return { html: result, count }
+}
+
 export function MarkdownViewer({
   content,
   filePath,
@@ -22,8 +43,22 @@ export function MarkdownViewer({
   settings,
 }: MarkdownViewerProps) {
   const { resolved } = useTheme()
-  const html = useMemo(() => renderMarkdown(content, filePath), [content, filePath])
   const containerRef = useRef<HTMLDivElement>(null)
+  const prevCountRef = useRef(0)
+
+  const baseHtml = useMemo(() => renderMarkdown(content, filePath), [content, filePath])
+
+  const { html: highlightedHtml, count } = useMemo(
+    () => highlightInHtml(baseHtml, searchQuery ?? ''),
+    [baseHtml, searchQuery]
+  )
+
+  useEffect(() => {
+    if (count !== prevCountRef.current) {
+      prevCountRef.current = count
+      onMatchInfo?.(count)
+    }
+  }, [count, onMatchInfo])
 
   useEffect(() => {
     const container = containerRef.current
@@ -50,87 +85,27 @@ export function MarkdownViewer({
     })
 
     Promise.all(tasks).catch(() => {})
-  }, [html, resolved])
+  }, [baseHtml, resolved])
 
-  const highlightSearch = useCallback(() => {
+  useEffect(() => {
+    if (!searchQuery) return
     const container = containerRef.current
     if (!container) return
 
-    const marks = container.querySelectorAll('mark.search-highlight')
-    marks.forEach((m) => {
-      const parent = m.parentNode
-      if (parent) {
-        parent.replaceChild(document.createTextNode(m.textContent ?? ''), m)
-        parent.normalize()
+    const allMarks = container.querySelectorAll<HTMLElement>('mark.search-highlight')
+    const currentIdx = searchCurrentMatch ?? 0
+
+    allMarks.forEach((m, i) => {
+      if (i === currentIdx) {
+        m.style.backgroundColor = '#f97316'
+        m.style.color = '#fff'
+        m.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        m.style.backgroundColor = '#fbbf24'
+        m.style.color = '#111827'
       }
     })
-
-    if (!searchQuery) {
-      onMatchInfo?.(0)
-      return
-    }
-
-    const query = searchQuery.toLowerCase()
-    const treeWalker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
-    const textNodes: Text[] = []
-    while (treeWalker.nextNode()) {
-      textNodes.push(treeWalker.currentNode as Text)
-    }
-
-    const matches: { node: Text; offset: number }[] = []
-    for (const node of textNodes) {
-      const text = node.textContent?.toLowerCase() ?? ''
-      let idx = 0
-      while ((idx = text.indexOf(query, idx)) !== -1) {
-        matches.push({ node, offset: idx })
-        idx += query.length
-      }
-    }
-
-    onMatchInfo?.(matches.length)
-
-    if (matches.length === 0) return
-
-    for (const { node, offset } of matches) {
-      const range = document.createRange()
-      range.setStart(node, offset)
-      range.setEnd(node, offset + query.length)
-
-      const mark = document.createElement('mark')
-      mark.className = 'search-highlight'
-      mark.style.backgroundColor = '#fbbf24'
-      mark.style.color = '#111827'
-      mark.style.borderRadius = '2px'
-      mark.style.padding = '0 1px'
-
-      try {
-        range.surroundContents(mark)
-      } catch {
-        const fragment = range.extractContents()
-        mark.appendChild(fragment)
-        range.insertNode(mark)
-      }
-    }
-
-    const allMarks = container.querySelectorAll('mark.search-highlight')
-    const currentIdx = searchCurrentMatch ?? 0
-    if (currentIdx >= 0 && currentIdx < allMarks.length) {
-      allMarks.forEach((m, i) => {
-        if (i === currentIdx) {
-          ;(m as HTMLElement).style.backgroundColor = '#f97316'
-          ;(m as HTMLElement).style.color = '#fff'
-          m.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        } else {
-          ;(m as HTMLElement).style.backgroundColor = '#fbbf24'
-          ;(m as HTMLElement).style.color = '#111827'
-        }
-      })
-    }
-  }, [searchQuery, searchCurrentMatch, onMatchInfo])
-
-  useEffect(() => {
-    highlightSearch()
-  }, [highlightSearch])
+  }, [searchQuery, searchCurrentMatch, count])
 
   const containerStyle = useMemo(() => {
     const maxWidth = settings.contentWidth === 'auto' ? '100%' : `${settings.contentWidth}px`
@@ -147,7 +122,7 @@ export function MarkdownViewer({
       ref={containerRef}
       className="md-content w-full mx-auto px-8 py-8"
       style={containerStyle}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
   )
 }
