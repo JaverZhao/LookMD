@@ -14,9 +14,21 @@
 
 ## 截图
 
-| 默认界面 (亮色) | 暗色模式 | 设置面板 | 文件编辑与浏览 |
-|:---:|:---:|:---:|:---:|
-| ![默认界面](LookMD_Screenshot/LookMD_Screenshot_default.png) | ![暗色模式](LookMD_Screenshot/LookMD_Screenshot_dark.png) | ![设置面板](LookMD_Screenshot/LookMD_Screenshot_setting.png) | ![文件编辑](LookMD_Screenshot/LookMD_Screenshot_edit.png) |
+**默认界面 (亮色)**
+
+![默认界面](LookMD_Screenshot/LookMD_Screenshot_default.png)
+
+**暗色模式**
+
+![暗色模式](LookMD_Screenshot/LookMD_Screenshot_dark.png)
+
+**设置面板**
+
+![设置面板](LookMD_Screenshot/LookMD_Screenshot_setting.png)
+
+**文件编辑与浏览**
+
+![文件编辑](LookMD_Screenshot/LookMD_Screenshot_edit.png)
 
 ## 功能
 
