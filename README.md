@@ -1,6 +1,22 @@
-# LookMD
+<p align="center">
+  <img src="icon/ICON.png" alt="LookMD" width="128" height="128">
+</p>
 
-LookMD —— 一个基于 Tauri 2 + React 的 Windows 本地轻量级 Markdown 阅读器。
+<h1 align="center">LookMD</h1>
+
+<p align="center">
+  <strong>Windows 本地轻量级 Markdown 阅读器</strong>
+</p>
+
+<p align="center">
+  基于 Tauri 2 + React 19 + TypeScript，开箱即用的桌面 Markdown 阅读工具。
+</p>
+
+## 截图
+
+| 默认界面 (亮色) | 暗色模式 | 设置面板 | 文件编辑与浏览 |
+|:---:|:---:|:---:|:---:|
+| ![默认界面](LookMD_Screenshot/LookMD_Screenshot_default.png) | ![暗色模式](LookMD_Screenshot/LookMD_Screenshot_dark.png) | ![设置面板](LookMD_Screenshot/LookMD_Screenshot_setting.png) | ![文件编辑](LookMD_Screenshot/LookMD_Screenshot_edit.png) |
 
 ## 功能
 
