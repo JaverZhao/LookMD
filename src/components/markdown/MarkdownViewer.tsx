@@ -1,4 +1,5 @@
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useEffect, useCallback } from 'react'
+import { open } from '@tauri-apps/plugin-shell'
 import { renderMarkdown } from '../../lib/markdown'
 import { highlightCode } from '../../lib/highlight'
 import { useTheme } from '../../hooks/useTheme'
@@ -107,6 +108,20 @@ export function MarkdownViewer({
     })
   }, [searchQuery, searchCurrentMatch, count])
 
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const anchor = target.closest('a')
+    if (!anchor) return
+
+    const href = anchor.getAttribute('href')
+    if (!href) return
+
+    if (href.startsWith('#') || href.startsWith('mailto:')) return
+
+    e.preventDefault()
+    open(href)
+  }, [])
+
   const containerStyle = useMemo(() => {
     const maxWidth = settings.contentWidth === 'auto' ? '100%' : `${settings.contentWidth}px`
     return {
@@ -122,6 +137,7 @@ export function MarkdownViewer({
       ref={containerRef}
       className="md-content w-full mx-auto px-8 py-8"
       style={containerStyle}
+      onClick={handleClick}
       dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
   )
