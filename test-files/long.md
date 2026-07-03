@@ -24,7 +24,7 @@
 
 ## 章节 2
 
-这是第2章的介绍段落。MD Reader Lite 是一个基于 Tauri 2 和 React 的 Windows 本地轻量级 Markdown 阅读器。
+这是第2章的介绍段落。MD Reader Lite 是一个基于 Tauri 2 和 React 的 Windows 本地轻量级 Markdown 阅读器。测试测试
 
 ### 小节 2.1
 

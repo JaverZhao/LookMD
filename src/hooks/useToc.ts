@@ -8,6 +8,7 @@ export function useToc(content: string | null): TocItem[] {
 
     const headingRegex = /^(#{1,3})\s+(.+)$/gm
     const headings: TocItem[] = []
+    const seen = new Map<string, number>()
     let match
 
     while ((match = headingRegex.exec(content)) !== null) {
@@ -15,7 +16,12 @@ export function useToc(content: string | null): TocItem[] {
       const text = match[2].trim()
       if (!text) continue
 
-      headings.push({ id: slugify(text), text, level })
+      const baseId = slugify(text)
+      const count = seen.get(baseId) ?? 0
+      const id = count > 0 ? `${baseId}-${count}` : baseId
+      seen.set(baseId, count + 1)
+
+      headings.push({ id, text, level })
     }
 
     return headings

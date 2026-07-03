@@ -169,7 +169,10 @@ export function AppShell({
           onSave={handleSave}
           onUndo={editProps.onUndo}
           onRedo={editProps.onRedo}
-          onCancelEdit={editProps.onStopEditing}
+          onCancelEdit={() => {
+            setViewerScrollRatio(editorScrollRef.current)
+            editProps.onStopEditing()
+          }}
         />
 
         <main

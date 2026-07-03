@@ -8,6 +8,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      ignored: ['**/test-files/**', '**/dist/**', '**/node_modules/**'],
+    },
   },
   envPrefix: ['VITE_', 'TAURI_'],
 })

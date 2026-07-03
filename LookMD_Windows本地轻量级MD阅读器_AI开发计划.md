@@ -4,6 +4,10 @@
 
 ---
 
+## 启动Vite开发服务器测试命令
+`pnpm tauri dev`
+
+
 ## 1. 项目目标
 
 开发一个运行在 Windows 系统上的本地轻量级 Markdown 文件阅读器。
