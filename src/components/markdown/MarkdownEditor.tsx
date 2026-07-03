@@ -6,9 +6,10 @@ interface MarkdownEditorProps {
   onChange: (content: string) => void
   settings: ReaderSettings
   scrollRatio?: number
+  onScrollRatioChange?: (ratio: number) => void
 }
 
-export function MarkdownEditor({ content, onChange, settings, scrollRatio = 0 }: MarkdownEditorProps) {
+export function MarkdownEditor({ content, onChange, settings, scrollRatio = 0, onScrollRatioChange }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const restoredRef = useRef(false)
 
@@ -30,6 +31,14 @@ export function MarkdownEditor({ content, onChange, settings, scrollRatio = 0 }:
     [content, onChange]
   )
 
+  const handleScroll = useCallback(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const { scrollTop, scrollHeight, clientHeight } = ta
+    const ratio = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0
+    onScrollRatioChange?.(ratio)
+  }, [onScrollRatioChange])
+
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -49,6 +58,7 @@ export function MarkdownEditor({ content, onChange, settings, scrollRatio = 0 }:
       value={content}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
+      onScroll={handleScroll}
       spellCheck={false}
       className="w-full h-full resize-none outline-none border-none p-8 leading-relaxed"
       style={{

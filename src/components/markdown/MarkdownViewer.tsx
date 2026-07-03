@@ -12,6 +12,7 @@ interface MarkdownViewerProps {
   searchCurrentMatch?: number
   onMatchInfo?: (total: number) => void
   settings: ReaderSettings
+  scrollRatio?: number
 }
 
 function highlightInHtml(html: string, query: string): { html: string; count: number } {
@@ -42,6 +43,7 @@ export function MarkdownViewer({
   searchCurrentMatch,
   onMatchInfo,
   settings,
+  scrollRatio,
 }: MarkdownViewerProps) {
   const { resolved } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -87,6 +89,21 @@ export function MarkdownViewer({
 
     Promise.all(tasks).catch(() => {})
   }, [baseHtml, resolved])
+
+  useEffect(() => {
+    if (scrollRatio === undefined) return
+    if (!containerRef.current) return
+
+    const container = containerRef.current
+    requestAnimationFrame(() => {
+      const parent = container.parentElement as HTMLElement | null
+      if (!parent) return
+      const { scrollHeight, clientHeight } = parent
+      if (scrollHeight > clientHeight) {
+        parent.scrollTop = (scrollHeight - clientHeight) * scrollRatio
+      }
+    })
+  }, [content, scrollRatio])
 
   useEffect(() => {
     if (!searchQuery) return

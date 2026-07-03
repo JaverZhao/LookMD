@@ -80,7 +80,9 @@ export function AppShell({
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const mainRef = useRef<HTMLDivElement>(null)
-  const [scrollRatio, setScrollRatio] = useState(0)
+  const [editorScrollRatio, setEditorScrollRatio] = useState(0)
+  const [viewerScrollRatio, setViewerScrollRatio] = useState<number | undefined>(undefined)
+  const editorScrollRef = useRef(0)
 
   useEffect(() => {
     const appWindow = getCurrentWindow()
@@ -111,15 +113,21 @@ export function AppShell({
     }
   }, [onOpenPath])
 
+  useEffect(() => {
+    setViewerScrollRatio(undefined)
+  }, [file?.path])
+
   const handleToggleEdit = useCallback(() => {
     if (editProps.isEditing) {
+      setViewerScrollRatio(editorScrollRef.current)
       editProps.onStopEditing()
     } else {
       if (mainRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = mainRef.current
         const ratio = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0
-        setScrollRatio(ratio)
+        setEditorScrollRatio(ratio)
       }
+      setViewerScrollRatio(undefined)
       editProps.onStartEditing()
     }
   }, [editProps])
@@ -190,7 +198,8 @@ export function AppShell({
               content={editProps.editContent}
               onChange={editProps.onEditContentChange}
               settings={settings}
-              scrollRatio={scrollRatio}
+              scrollRatio={editorScrollRatio}
+              onScrollRatioChange={(r) => { editorScrollRef.current = r }}
             />
           ) : file ? (
             <MarkdownViewer
@@ -200,6 +209,7 @@ export function AppShell({
               searchCurrentMatch={searchProps.currentMatch}
               onMatchInfo={onSearchMatchInfo}
               settings={settings}
+              scrollRatio={viewerScrollRatio}
             />
           ) : (
             <div className="text-center max-w-md px-8">
