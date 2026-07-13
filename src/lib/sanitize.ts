@@ -16,6 +16,7 @@ export function sanitizeHtml(html: string): string {
     ALLOWED_ATTR: [
       'id', 'class', 'href', 'src', 'alt', 'title',
       'target', 'rel', 'type', 'checked',
+      'width', 'height', 'align',
     ],
   })
 }

@@ -115,6 +115,18 @@
   border-radius: 12px;
 }
 
+.md-content p[align="center"] {
+  text-align: center;
+}
+
+.md-content p[align="left"] {
+  text-align: left;
+}
+
+.md-content p[align="right"] {
+  text-align: right;
+}
+
 .md-content hr {
   border: none;
   border-top: 1px solid var(--color-border-primary);
