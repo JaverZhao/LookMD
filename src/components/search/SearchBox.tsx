@@ -25,22 +25,28 @@ export function SearchBox({
   onPrev,
 }: SearchBoxProps) {
   const composingRef = useRef(false)
-  const [inputValue, setInputValue] = useState(query)
+  const [compositionValue, setCompositionValue] = useState<string | null>(null)
 
-  useEffect(() => {
-    setInputValue(query)
-  }, [query, isOpen])
+  const closeSearch = useCallback(() => {
+    composingRef.current = false
+    setCompositionValue(null)
+    onClose()
+  }, [onClose])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        closeSearch()
       }
       if (e.key === 'Enter') {
-        e.shiftKey ? onPrev() : onNext()
+        if (e.shiftKey) {
+          onPrev()
+        } else {
+          onNext()
+        }
       }
     },
-    [onClose, onNext, onPrev]
+    [closeSearch, onNext, onPrev]
   )
 
   useEffect(() => {
@@ -69,16 +75,22 @@ export function SearchBox({
       <input
         ref={inputRef}
         type="text"
-        value={inputValue}
+        value={compositionValue ?? query}
         onChange={(e) => {
-          setInputValue(e.target.value)
-          if (!composingRef.current) onQueryChange(e.target.value)
+          if (composingRef.current) {
+            setCompositionValue(e.target.value)
+          } else {
+            onQueryChange(e.target.value)
+          }
         }}
-        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionStart={(e) => {
+          composingRef.current = true
+          setCompositionValue(e.currentTarget.value)
+        }}
         onCompositionEnd={(e) => {
           composingRef.current = false
           const value = (e.target as HTMLInputElement).value
-          setInputValue(value)
+          setCompositionValue(null)
           onQueryChange(value)
         }}
         onKeyDown={handleKeyDown}
@@ -114,7 +126,7 @@ export function SearchBox({
       <button
         className="flex items-center justify-center w-5 h-5 rounded cursor-pointer"
         style={{ color: 'var(--color-text-tertiary)' }}
-        onClick={onClose}
+        onClick={closeSearch}
       >
         <X size={14} />
       </button>

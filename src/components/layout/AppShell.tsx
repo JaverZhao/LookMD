@@ -81,7 +81,7 @@ export function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const mainRef = useRef<HTMLDivElement>(null)
   const [editorScrollRatio, setEditorScrollRatio] = useState(0)
-  const [viewerScrollRatio, setViewerScrollRatio] = useState<number | undefined>(undefined)
+  const [viewerScrollState, setViewerScrollState] = useState<{ filePath: string; ratio: number } | null>(null)
   const editorScrollRef = useRef(0)
 
   useEffect(() => {
@@ -113,13 +113,15 @@ export function AppShell({
     }
   }, [onOpenPath])
 
-  useEffect(() => {
-    setViewerScrollRatio(undefined)
-  }, [file?.path])
+  const viewerScrollRatio = viewerScrollState && viewerScrollState.filePath === file?.path
+    ? viewerScrollState.ratio
+    : undefined
 
   const handleToggleEdit = useCallback(() => {
     if (editProps.isEditing) {
-      setViewerScrollRatio(editorScrollRef.current)
+      if (file) {
+        setViewerScrollState({ filePath: file.path, ratio: editorScrollRef.current })
+      }
       editProps.onStopEditing()
     } else {
       if (mainRef.current) {
@@ -127,10 +129,10 @@ export function AppShell({
         const ratio = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0
         setEditorScrollRatio(ratio)
       }
-      setViewerScrollRatio(undefined)
+      setViewerScrollState(null)
       editProps.onStartEditing()
     }
-  }, [editProps])
+  }, [editProps, file])
 
   const handleSave = useCallback(async () => {
     if (!file) return
@@ -170,7 +172,9 @@ export function AppShell({
           onUndo={editProps.onUndo}
           onRedo={editProps.onRedo}
           onCancelEdit={() => {
-            setViewerScrollRatio(editorScrollRef.current)
+            if (file) {
+              setViewerScrollState({ filePath: file.path, ratio: editorScrollRef.current })
+            }
             editProps.onStopEditing()
           }}
         />

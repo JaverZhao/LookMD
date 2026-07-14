@@ -11,11 +11,13 @@ export function useEditMode(initialContent: string) {
   const [content, setContent] = useState(initialContent)
   const historyRef = useRef<HistoryEntry[]>([{ content: initialContent }])
   const [historyIndex, setHistoryIndex] = useState(0)
+  const [historyLength, setHistoryLength] = useState(1)
 
   const startEditing = useCallback(() => {
     setContent(initialContent)
     historyRef.current = [{ content: initialContent }]
     setHistoryIndex(0)
+    setHistoryLength(1)
     setIsEditing(true)
   }, [initialContent])
 
@@ -36,6 +38,7 @@ export function useEditMode(initialContent: string) {
     const newIndex = trimmed.length - 1
     historyRef.current = trimmed
     setHistoryIndex(newIndex)
+    setHistoryLength(trimmed.length)
   }, [historyIndex])
 
   const undo = useCallback(() => {
@@ -53,7 +56,7 @@ export function useEditMode(initialContent: string) {
   }, [historyIndex])
 
   const canUndo = historyIndex > 0
-  const canRedo = historyIndex < historyRef.current.length - 1
+  const canRedo = historyIndex < historyLength - 1
   const isModified = content !== initialContent
 
   return {
