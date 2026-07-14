@@ -18,6 +18,11 @@ import type { ReaderSettings } from '../../types/settings'
 import { renderEditableMarkdown } from '../../lib/markdown'
 import { sanitizeHtml } from '../../lib/sanitize'
 import { editableHtmlToMarkdown } from '../../lib/wysiwyg'
+import {
+  findBlockInputRule,
+  findInlineInputRule,
+  type MarkdownBlockRule,
+} from '../../lib/editorInputRules'
 
 interface MarkdownEditorProps {
   content: string
@@ -35,6 +40,130 @@ interface EditorSurfaceProps extends MarkdownEditorProps {
 function getScrollRatio(element: HTMLElement): number {
   const { scrollTop, scrollHeight, clientHeight } = element
   return scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0
+}
+
+interface AppliedBlockInputRule {
+  target: HTMLElement
+  container: HTMLElement
+  prefix: string
+}
+
+function placeCaret(element: HTMLElement, atEnd = false) {
+  const selection = window.getSelection()
+  if (!selection) return
+
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(!atEnd)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+function getCurrentParagraph(editor: HTMLElement): HTMLElement | null {
+  const selection = window.getSelection()
+  const node = selection?.anchorNode
+  if (!selection?.isCollapsed || !node || !editor.contains(node)) return null
+
+  const element = node.nodeType === Node.ELEMENT_NODE
+    ? node as HTMLElement
+    : node.parentElement
+  const paragraph = element?.closest<HTMLElement>('p, div') ?? null
+  return paragraph?.parentElement === editor ? paragraph : null
+}
+
+function getTextBeforeCaret(block: HTMLElement): string | null {
+  const selection = window.getSelection()
+  if (!selection?.isCollapsed || !selection.anchorNode || !block.contains(selection.anchorNode)) return null
+
+  const range = document.createRange()
+  range.selectNodeContents(block)
+  range.setEnd(selection.anchorNode, selection.anchorOffset)
+  return range.toString()
+}
+
+function createEmptyBlock(tagName: string): HTMLElement {
+  const element = document.createElement(tagName)
+  element.appendChild(document.createElement('br'))
+  return element
+}
+
+function applyBlockInputRule(editor: HTMLElement, rule: MarkdownBlockRule): AppliedBlockInputRule | null {
+  const paragraph = getCurrentParagraph(editor)
+  if (!paragraph || paragraph.textContent !== rule.prefix || getTextBeforeCaret(paragraph) !== rule.prefix) return null
+
+  if (rule.kind === 'heading') {
+    const heading = createEmptyBlock(`h${rule.level}`)
+    paragraph.replaceWith(heading)
+    placeCaret(heading)
+    return { target: heading, container: heading, prefix: rule.prefix }
+  }
+
+  if (rule.kind === 'bulletList' || rule.kind === 'orderedList') {
+    const list = document.createElement(rule.kind === 'bulletList' ? 'ul' : 'ol')
+    const item = createEmptyBlock('li')
+    list.appendChild(item)
+    paragraph.replaceWith(list)
+    placeCaret(item)
+    return { target: item, container: list, prefix: rule.prefix }
+  }
+
+  if (rule.kind === 'blockquote') {
+    const blockquote = document.createElement('blockquote')
+    const innerParagraph = createEmptyBlock('p')
+    blockquote.appendChild(innerParagraph)
+    paragraph.replaceWith(blockquote)
+    placeCaret(innerParagraph)
+    return { target: innerParagraph, container: blockquote, prefix: rule.prefix }
+  }
+
+  const codeBlock = createEmptyBlock('pre')
+  paragraph.replaceWith(codeBlock)
+  placeCaret(codeBlock)
+  return { target: codeBlock, container: codeBlock, prefix: rule.prefix }
+}
+
+function restoreBlockInputRule(applied: AppliedBlockInputRule): boolean {
+  const selection = window.getSelection()
+  if (!selection?.isCollapsed || !selection.anchorNode || !applied.target.contains(selection.anchorNode)) return false
+  if (applied.target.textContent) return false
+
+  const beforeCaret = document.createRange()
+  beforeCaret.selectNodeContents(applied.target)
+  beforeCaret.setEnd(selection.anchorNode, selection.anchorOffset)
+  if (beforeCaret.toString()) return false
+
+  const paragraph = document.createElement('p')
+  paragraph.textContent = applied.prefix
+  applied.container.replaceWith(paragraph)
+  placeCaret(paragraph, true)
+  return true
+}
+
+function applyInlineInputRule(editor: HTMLElement): boolean {
+  const selection = window.getSelection()
+  const textNode = selection?.anchorNode
+  if (!selection?.isCollapsed || !textNode || textNode.nodeType !== Node.TEXT_NODE || !editor.contains(textNode)) return false
+  if (textNode.parentElement?.closest('pre, code')) return false
+
+  const offset = selection.anchorOffset
+  const textBeforeCaret = textNode.textContent?.slice(0, offset) ?? ''
+  const rule = findInlineInputRule(textBeforeCaret)
+  if (!rule) return false
+
+  const range = document.createRange()
+  range.setStart(textNode, rule.start)
+  range.setEnd(textNode, offset)
+  range.deleteContents()
+
+  const formatted = document.createElement(rule.tagName)
+  formatted.textContent = rule.content
+  if (rule.tagName === 'a' && rule.href) formatted.setAttribute('href', rule.href)
+  range.insertNode(formatted)
+  range.setStartAfter(formatted)
+  range.collapse(true)
+  selection.removeAllRanges()
+  selection.addRange(range)
+  return true
 }
 
 function SourceEditor({ content, onChange, settings, scrollRatio, onScrollRatioChange }: EditorSurfaceProps) {
@@ -122,6 +251,8 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
   const editorRef = useRef<HTMLDivElement>(null)
   const lastEmittedRef = useRef<string | null>(null)
   const restoredRef = useRef(false)
+  const composingRef = useRef(false)
+  const appliedBlockRuleRef = useRef<AppliedBlockInputRule | null>(null)
 
   const emitMarkdown = useCallback(() => {
     const editor = editorRef.current
@@ -141,6 +272,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
       return
     }
 
+    appliedBlockRuleRef.current = null
     editor.innerHTML = renderEditableMarkdown(content, filePath) || '<p><br></p>'
   }, [content, filePath])
 
@@ -158,6 +290,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
   }, [scrollRatio])
 
   const runCommand = useCallback((command: string, value?: string) => {
+    appliedBlockRuleRef.current = null
     editorRef.current?.focus()
     document.execCommand(command, false, value)
     emitMarkdown()
@@ -167,6 +300,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
     const url = window.prompt('请输入链接地址')?.trim()
     if (!url || /^\s*(?:javascript|data|vbscript):/i.test(url)) return
 
+    appliedBlockRuleRef.current = null
     editorRef.current?.focus()
     const selection = window.getSelection()?.toString() ?? ''
     if (selection) {
@@ -179,6 +313,52 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
         .replace(/"/g, '&quot;')
       document.execCommand('insertHTML', false, `<a href="${escaped}">${escaped}</a>`)
     }
+    emitMarkdown()
+  }, [emitMarkdown])
+
+  const handleWysiwygInput = useCallback(() => {
+    appliedBlockRuleRef.current = null
+    if (!composingRef.current && editorRef.current) {
+      applyInlineInputRule(editorRef.current)
+    }
+    emitMarkdown()
+  }, [emitMarkdown])
+
+  const handleWysiwygKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    if (!composingRef.current && !e.nativeEvent.isComposing && (e.key === ' ' || e.key === 'Enter')) {
+      const paragraph = getCurrentParagraph(editor)
+      const textBeforeCaret = paragraph ? getTextBeforeCaret(paragraph) : null
+      const rule = textBeforeCaret === null ? undefined : findBlockInputRule(textBeforeCaret)
+      const canApplyWithKey = e.key === ' ' || rule?.kind === 'codeBlock'
+
+      if (rule && canApplyWithKey) {
+        const applied = applyBlockInputRule(editor, rule)
+        if (applied) {
+          e.preventDefault()
+          appliedBlockRuleRef.current = applied
+          emitMarkdown()
+          return
+        }
+      }
+    }
+
+    if (e.key === 'Backspace' && appliedBlockRuleRef.current) {
+      if (restoreBlockInputRule(appliedBlockRuleRef.current)) {
+        e.preventDefault()
+        appliedBlockRuleRef.current = null
+        emitMarkdown()
+        return
+      }
+    }
+
+    if (e.key !== 'Tab') return
+    e.preventDefault()
+    appliedBlockRuleRef.current = null
+    const element = window.getSelection()?.anchorNode?.parentElement
+    document.execCommand(element?.closest('li') ? (e.shiftKey ? 'outdent' : 'indent') : 'insertText', false, '  ')
     emitMarkdown()
   }, [emitMarkdown])
 
@@ -209,9 +389,13 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
         <ToolbarButton label="有序列表" onPress={() => runCommand('insertOrderedList')}><ListOrdered size={16} /></ToolbarButton>
         <ToolbarButton label="引用" onPress={() => runCommand('formatBlock', 'blockquote')}><Quote size={16} /></ToolbarButton>
         <ToolbarButton label="插入链接" onPress={insertLink}><Link size={16} /></ToolbarButton>
-        <span className="ml-auto flex items-center gap-1.5 text-xs px-2" style={{ color: 'var(--color-text-tertiary)' }}>
+        <span
+          className="ml-auto flex items-center gap-1.5 text-xs px-2"
+          style={{ color: 'var(--color-text-tertiary)' }}
+          title="支持 Markdown 快捷输入"
+        >
           <Braces size={14} />
-          所见即所得
+          所见即所得 · Markdown 快捷输入
         </span>
       </div>
 
@@ -230,13 +414,16 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
           color: 'var(--color-text-primary)',
           backgroundColor: 'var(--color-bg-primary)',
         }}
-        onInput={emitMarkdown}
+        onInput={handleWysiwygInput}
         onScroll={(e) => onScrollRatioChange?.(getScrollRatio(e.currentTarget))}
-        onKeyDown={(e) => {
-          if (e.key !== 'Tab') return
-          e.preventDefault()
-          const element = window.getSelection()?.anchorNode?.parentElement
-          document.execCommand(element?.closest('li') ? (e.shiftKey ? 'outdent' : 'indent') : 'insertText', false, '  ')
+        onKeyDown={handleWysiwygKeyDown}
+        onCompositionStart={() => {
+          composingRef.current = true
+          appliedBlockRuleRef.current = null
+        }}
+        onCompositionEnd={() => {
+          composingRef.current = false
+          if (editorRef.current) applyInlineInputRule(editorRef.current)
           emitMarkdown()
         }}
         onPaste={(e) => {
