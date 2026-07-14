@@ -10,13 +10,13 @@ export function sanitizeHtml(html: string): string {
       'pre', 'code',
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
       'a', 'img',
-      'strong', 'em', 'del', 'ins', 'sub', 'sup',
+      'strong', 'b', 'em', 'i', 'del', 's', 'strike', 'ins', 'sub', 'sup',
       'input',
     ],
     ALLOWED_ATTR: [
       'id', 'class', 'href', 'src', 'alt', 'title',
       'target', 'rel', 'type', 'checked',
-      'width', 'height', 'align',
+      'width', 'height', 'align', 'data-md-src',
     ],
   })
 }

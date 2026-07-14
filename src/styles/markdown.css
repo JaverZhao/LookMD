@@ -152,3 +152,19 @@
 .md-content input[type="checkbox"] {
   margin-right: 0.5rem;
 }
+
+.wysiwyg-editor {
+  caret-color: var(--color-accent);
+}
+
+.wysiwyg-editor:focus {
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+.wysiwyg-editor a {
+  cursor: text;
+}
+
+.wysiwyg-editor pre {
+  white-space: pre-wrap;
+}

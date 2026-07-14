@@ -46,7 +46,50 @@ export function SettingsDialog({ open, onClose, settings, onUpdate, onReset }: S
   )
 
   return (
-    <Modal open={open} onClose={onClose} title="阅读设置">
+    <Modal open={open} onClose={onClose} title="阅读与编辑设置">
+      {/* Editor mode */}
+      <div>
+        <label
+          className="block text-xs font-medium mb-2"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          默认编辑模式
+        </label>
+        <div
+          className="grid grid-cols-2 gap-1 p-1 rounded-xl border"
+          style={{
+            backgroundColor: 'var(--color-bg-primary)',
+            borderColor: 'var(--color-border-primary)',
+          }}
+        >
+          <button
+            type="button"
+            className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150"
+            style={{
+              color: settings.editorMode === 'wysiwyg' ? '#fff' : 'var(--color-text-secondary)',
+              backgroundColor: settings.editorMode === 'wysiwyg' ? 'var(--color-accent)' : 'transparent',
+            }}
+            onClick={() => onUpdate('editorMode', 'wysiwyg')}
+          >
+            所见即所得
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors duration-150"
+            style={{
+              color: settings.editorMode === 'source' ? '#fff' : 'var(--color-text-secondary)',
+              backgroundColor: settings.editorMode === 'source' ? 'var(--color-accent)' : 'transparent',
+            }}
+            onClick={() => onUpdate('editorMode', 'source')}
+          >
+            Markdown 源码
+          </button>
+        </div>
+        <p className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
+          所见即所得模式会隐藏 Markdown 标记，保存时仍写入标准 Markdown 内容。
+        </p>
+      </div>
+
       {/* Theme color */}
       <div>
         <label

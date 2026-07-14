@@ -10,6 +10,7 @@ const DEFAULTS: ReaderSettings = {
   lineHeight: 170,
   contentWidth: 900,
   themeColor: '#3b82f6',
+  editorMode: 'wysiwyg',
 }
 
 function hexToRgb(hex: string) {

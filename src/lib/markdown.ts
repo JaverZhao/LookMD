@@ -18,6 +18,13 @@ const md: MarkdownIt = new MarkdownIt({
   },
 })
 
+const editableMd: MarkdownIt = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: false,
+})
+
 export function slugify(s: string): string {
   return s
     .trim()
@@ -49,4 +56,22 @@ export function renderMarkdown(content: string, filePath?: string): string {
   }
 
   return sanitizeHtml(processed)
+}
+
+export function renderEditableMarkdown(content: string, filePath?: string): string {
+  let html = editableMd.render(content)
+
+  if (filePath) {
+    const dir = filePath.split('\\').slice(0, -1).join('\\')
+    html = html.replace(
+      /(<img[^>]+src=")([^"]+)(")/g,
+      (match: string, prefix: string, src: string, suffix: string) => {
+        if (/^(?:https?:\/\/|data:|file:|asset:|\/|\\)/i.test(src)) return match
+        const fullPath = `${dir}\\${src.replace(/\//g, '\\')}`
+        return `${prefix}${convertFileSrc(fullPath)}${suffix} data-md-src="${src}"`
+      }
+    )
+  }
+
+  return sanitizeHtml(html)
 }

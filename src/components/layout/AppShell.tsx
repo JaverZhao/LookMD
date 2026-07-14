@@ -201,6 +201,7 @@ export function AppShell({
               content={editProps.editContent}
               onChange={editProps.onEditContentChange}
               settings={settings}
+              filePath={file.path}
               scrollRatio={editorScrollRatio}
               onScrollRatioChange={(r) => { editorScrollRef.current = r }}
             />

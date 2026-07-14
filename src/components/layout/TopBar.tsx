@@ -97,7 +97,7 @@ export function TopBar({ theme, onToggleTheme, fileName, onOpenFile, onOpenSetti
         <IconButton onClick={onOpenFile} tooltip="打开文件">
           <FileUp size={18} />
         </IconButton>
-        <IconButton onClick={onOpenSettings} tooltip="阅读设置">
+        <IconButton onClick={onOpenSettings} tooltip="阅读与编辑设置">
           <Settings size={18} />
         </IconButton>
         <IconButton onClick={onToggleTheme} tooltip="切换主题">

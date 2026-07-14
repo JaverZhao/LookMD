@@ -1,4 +1,5 @@
 export type ThemeMode = 'light' | 'dark' | 'system'
+export type EditorMode = 'wysiwyg' | 'source'
 
 export interface ReaderSettings {
   fontFamily: string
@@ -6,4 +7,5 @@ export interface ReaderSettings {
   lineHeight: number
   contentWidth: number | 'auto'
   themeColor: string
+  editorMode: EditorMode
 }
