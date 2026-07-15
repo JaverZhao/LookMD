@@ -163,6 +163,9 @@ export function Sidebar({ recentFiles, onRecentClick, onRecentRemove, tocItems, 
                       {file.name}
                     </button>
                     <button
+                      type="button"
+                      title={`从最近文件中移除 ${file.name}`}
+                      aria-label={`从最近文件中移除 ${file.name}`}
                       className="opacity-0 group-hover:opacity-100 text-xs px-1.5 py-1 rounded transition-opacity cursor-pointer"
                       style={{ color: 'var(--color-text-tertiary)' }}
                       onClick={() => onRecentRemove(file.path)}

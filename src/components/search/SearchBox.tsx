@@ -108,6 +108,9 @@ export function SearchBox({
       {query && (
         <>
           <button
+            type="button"
+            title="上一个匹配项 (Shift+Enter)"
+            aria-label="上一个匹配项"
             className="flex items-center justify-center w-5 h-5 rounded cursor-pointer"
             style={{ color: 'var(--color-text-tertiary)' }}
             onClick={onPrev}
@@ -115,6 +118,9 @@ export function SearchBox({
             <ChevronUp size={14} />
           </button>
           <button
+            type="button"
+            title="下一个匹配项 (Enter)"
+            aria-label="下一个匹配项"
             className="flex items-center justify-center w-5 h-5 rounded cursor-pointer"
             style={{ color: 'var(--color-text-tertiary)' }}
             onClick={onNext}
@@ -124,6 +130,9 @@ export function SearchBox({
         </>
       )}
       <button
+        type="button"
+        title="关闭搜索 (Esc)"
+        aria-label="关闭搜索"
         className="flex items-center justify-center w-5 h-5 rounded cursor-pointer"
         style={{ color: 'var(--color-text-tertiary)' }}
         onClick={closeSearch}

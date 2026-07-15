@@ -31,6 +31,9 @@ export function Toast({ message, type = 'error', onDismiss }: ToastProps) {
     >
       <span className="flex-1">{message}</span>
       <button
+        type="button"
+        title="关闭提示"
+        aria-label="关闭提示"
         className="flex items-center justify-center w-5 h-5 rounded cursor-pointer opacity-60 hover:opacity-100"
         onClick={onDismiss}
       >

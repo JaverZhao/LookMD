@@ -67,6 +67,14 @@
   color: var(--color-text-secondary);
 }
 
+.md-content blockquote > :first-child {
+  margin-top: 0;
+}
+
+.md-content blockquote > :last-child {
+  margin-bottom: 0;
+}
+
 .md-content table {
   width: 100%;
   border-collapse: collapse;
@@ -167,4 +175,13 @@
 
 .wysiwyg-editor pre {
   white-space: pre-wrap;
+}
+
+.wysiwyg-editor img {
+  cursor: pointer;
+}
+
+.wysiwyg-editor img[data-selected="true"] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }

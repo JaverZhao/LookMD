@@ -6,9 +6,12 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tooltip?: string
 }
 
-export function IconButton({ children, className, ...props }: IconButtonProps) {
+export function IconButton({ children, className, tooltip, title, 'aria-label': ariaLabel, ...props }: IconButtonProps) {
   return (
     <button
+      type="button"
+      title={tooltip ?? title}
+      aria-label={ariaLabel ?? tooltip}
       className={cn(
         'flex items-center justify-center w-8 h-8 rounded-lg',
         'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]',

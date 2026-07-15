@@ -46,6 +46,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             {title}
           </h2>
           <button
+            type="button"
+            title="关闭设置"
+            aria-label="关闭设置"
             className="flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer text-sm"
             style={{ color: 'var(--color-text-tertiary)' }}
             onClick={onClose}

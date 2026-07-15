@@ -1,4 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
+import { convertFileSrc } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import {
   Bold,
   Braces,
@@ -7,12 +9,14 @@ import {
   Heading2,
   Heading3,
   Italic,
+  ImagePlus,
   Link,
   List,
   ListOrdered,
   Pilcrow,
   Quote,
   Strikethrough,
+  Trash2,
 } from 'lucide-react'
 import type { ReaderSettings } from '../../types/settings'
 import { renderEditableMarkdown } from '../../lib/markdown'
@@ -85,6 +89,88 @@ function createEmptyBlock(tagName: string): HTMLElement {
   const element = document.createElement(tagName)
   element.appendChild(document.createElement('br'))
   return element
+}
+
+function isEmptyBlock(element: HTMLElement): boolean {
+  return !(element.textContent ?? '').trim() && !element.querySelector('img, hr, table')
+}
+
+function ensureTrailingParagraph(editor: HTMLElement): HTMLElement {
+  const last = editor.lastElementChild as HTMLElement | null
+  if (last?.tagName === 'P' && isEmptyBlock(last)) return last
+
+  const paragraph = createEmptyBlock('p')
+  paragraph.dataset.editorTrailing = 'true'
+  editor.appendChild(paragraph)
+  return paragraph
+}
+
+function getSelectedImage(editor: HTMLElement): HTMLImageElement | null {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) return null
+
+  const range = selection.getRangeAt(0)
+  if (!editor.contains(range.commonAncestorContainer)) return null
+
+  if (range.startContainer.nodeType === Node.ELEMENT_NODE && range.endContainer === range.startContainer) {
+    const container = range.startContainer as Element
+    if (range.endOffset === range.startOffset + 1) {
+      const selected = container.childNodes.item(range.startOffset)
+      if (selected instanceof HTMLImageElement) return selected
+    }
+  }
+
+  const node = selection.anchorNode
+  const element = node?.nodeType === Node.ELEMENT_NODE ? node as Element : node?.parentElement
+  return element?.closest('img') as HTMLImageElement | null
+}
+
+function selectImage(editor: HTMLElement, image: HTMLImageElement) {
+  editor.querySelectorAll('img[data-selected]').forEach((item) => item.removeAttribute('data-selected'))
+  image.dataset.selected = 'true'
+
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNode(image)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+function markdownImageSource(imagePath: string, documentPath?: string): string {
+  const normalizedImage = imagePath.replace(/\\/g, '/')
+  if (!documentPath) return encodeMarkdownImageSource(normalizedImage)
+
+  const normalizedDocument = documentPath.replace(/\\/g, '/')
+  const imageDrive = normalizedImage.match(/^[A-Za-z]:/)?.[0].toLowerCase()
+  const documentDrive = normalizedDocument.match(/^[A-Za-z]:/)?.[0].toLowerCase()
+  if (!imageDrive || imageDrive !== documentDrive) return encodeMarkdownImageSource(normalizedImage)
+
+  const documentDir = normalizedDocument.slice(0, normalizedDocument.lastIndexOf('/'))
+  const from = documentDir.split('/').filter(Boolean)
+  const to = normalizedImage.split('/').filter(Boolean)
+  let common = 0
+  while (common < from.length && common < to.length && from[common].toLowerCase() === to[common].toLowerCase()) {
+    common += 1
+  }
+
+  const relative = [...Array(from.length - common).fill('..'), ...to.slice(common)].join('/') || normalizedImage
+  return encodeMarkdownImageSource(relative)
+}
+
+function encodeMarkdownImageSource(source: string): string {
+  return source
+    .split('/')
+    .map((segment) => encodeURIComponent(segment).replace(/^([A-Za-z])%3A$/i, '$1:'))
+    .join('/')
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function applyBlockInputRule(editor: HTMLElement, rule: MarkdownBlockRule): AppliedBlockInputRule | null {
@@ -258,6 +344,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
     const editor = editorRef.current
     if (!editor) return
 
+    ensureTrailingParagraph(editor)
     const markdown = editableHtmlToMarkdown(editor.innerHTML)
     lastEmittedRef.current = markdown
     onChange(markdown)
@@ -274,6 +361,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
 
     appliedBlockRuleRef.current = null
     editor.innerHTML = renderEditableMarkdown(content, filePath) || '<p><br></p>'
+    ensureTrailingParagraph(editor)
   }, [content, filePath])
 
   useEffect(() => {
@@ -316,17 +404,94 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
     emitMarkdown()
   }, [emitMarkdown])
 
+  const insertImage = useCallback(async () => {
+    const editor = editorRef.current
+    const selection = window.getSelection()
+    const savedRange = editor && selection?.rangeCount && editor.contains(selection.getRangeAt(0).commonAncestorContainer)
+      ? selection.getRangeAt(0).cloneRange()
+      : null
+
+    const selected = await open({
+      multiple: false,
+      filters: [{
+        name: '图片',
+        extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'],
+      }],
+    })
+    if (!selected) return
+
+    if (!editor) return
+    editor.focus()
+    if (savedRange && selection) {
+      selection.removeAllRanges()
+      selection.addRange(savedRange)
+    }
+
+    const imagePath = selected as string
+    const source = markdownImageSource(imagePath, filePath)
+    const fileName = imagePath.split(/[\\/]/).pop() ?? '图片'
+    const alt = fileName.replace(/\.[^.]+$/, '')
+    const html = `<img src="${escapeHtmlAttribute(convertFileSrc(imagePath))}" data-md-src="${escapeHtmlAttribute(source)}" alt="${escapeHtmlAttribute(alt)}">`
+    document.execCommand('insertHTML', false, html)
+    ensureTrailingParagraph(editor)
+    emitMarkdown()
+  }, [emitMarkdown, filePath])
+
+  const deleteSelectedImage = useCallback(() => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    const image = getSelectedImage(editor)
+    if (!image) return
+    const parent = image.parentElement
+    image.remove()
+    if (parent && parent !== editor && isEmptyBlock(parent)) parent.remove()
+    placeCaret(ensureTrailingParagraph(editor))
+    emitMarkdown()
+  }, [emitMarkdown])
+
   const handleWysiwygInput = useCallback(() => {
     appliedBlockRuleRef.current = null
     if (!composingRef.current && editorRef.current) {
       applyInlineInputRule(editorRef.current)
     }
+    if (editorRef.current) ensureTrailingParagraph(editorRef.current)
     emitMarkdown()
   }, [emitMarkdown])
 
   const handleWysiwygKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const editor = editorRef.current
     if (!editor) return
+
+    if ((e.key === 'Backspace' || e.key === 'Delete') && getSelectedImage(editor)) {
+      e.preventDefault()
+      deleteSelectedImage()
+      return
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey && !composingRef.current && !e.nativeEvent.isComposing) {
+      const selection = window.getSelection()
+      const node = selection?.anchorNode
+      const element = node?.nodeType === Node.ELEMENT_NODE ? node as HTMLElement : node?.parentElement
+      const pre = element?.closest<HTMLElement>('pre')
+      const listItem = element?.closest<HTMLElement>('li')
+      const exitContainer = pre ?? (listItem && isEmptyBlock(listItem) ? listItem.closest<HTMLElement>('ul, ol') : null)
+      const activeBlock = listItem ?? element?.closest<HTMLElement>('p, div, pre, blockquote')
+
+      if (exitContainer && activeBlock && isEmptyBlock(activeBlock)) {
+        e.preventDefault()
+        if (listItem) listItem.remove()
+        else if (activeBlock !== exitContainer) activeBlock.remove()
+
+        const paragraph = createEmptyBlock('p')
+        exitContainer.insertAdjacentElement('afterend', paragraph)
+        if (isEmptyBlock(exitContainer)) exitContainer.remove()
+        ensureTrailingParagraph(editor)
+        placeCaret(paragraph)
+        emitMarkdown()
+        return
+      }
+    }
 
     if (!composingRef.current && !e.nativeEvent.isComposing && (e.key === ' ' || e.key === 'Enter')) {
       const paragraph = getCurrentParagraph(editor)
@@ -360,7 +525,7 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
     const element = window.getSelection()?.anchorNode?.parentElement
     document.execCommand(element?.closest('li') ? (e.shiftKey ? 'outdent' : 'indent') : 'insertText', false, '  ')
     emitMarkdown()
-  }, [emitMarkdown])
+  }, [deleteSelectedImage, emitMarkdown])
 
   const maxWidth = settings.contentWidth === 'auto' ? '100%' : `${settings.contentWidth}px`
 
@@ -389,6 +554,9 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
         <ToolbarButton label="有序列表" onPress={() => runCommand('insertOrderedList')}><ListOrdered size={16} /></ToolbarButton>
         <ToolbarButton label="引用" onPress={() => runCommand('formatBlock', 'blockquote')}><Quote size={16} /></ToolbarButton>
         <ToolbarButton label="插入链接" onPress={insertLink}><Link size={16} /></ToolbarButton>
+        <ToolbarDivider />
+        <ToolbarButton label="插入本地图片" onPress={() => { void insertImage() }}><ImagePlus size={16} /></ToolbarButton>
+        <ToolbarButton label="删除选中图片" onPress={deleteSelectedImage}><Trash2 size={16} /></ToolbarButton>
         <span
           className="ml-auto flex items-center gap-1.5 text-xs px-2"
           style={{ color: 'var(--color-text-tertiary)' }}
@@ -417,6 +585,14 @@ function WysiwygEditor({ content, onChange, settings, filePath, scrollRatio, onS
         onInput={handleWysiwygInput}
         onScroll={(e) => onScrollRatioChange?.(getScrollRatio(e.currentTarget))}
         onKeyDown={handleWysiwygKeyDown}
+        onClick={(e) => {
+          const target = e.target
+          if (target instanceof HTMLImageElement) {
+            selectImage(e.currentTarget, target)
+          } else {
+            e.currentTarget.querySelectorAll('img[data-selected]').forEach((item) => item.removeAttribute('data-selected'))
+          }
+        }}
         onCompositionStart={() => {
           composingRef.current = true
           appliedBlockRuleRef.current = null

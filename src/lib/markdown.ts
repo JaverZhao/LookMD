@@ -39,17 +39,41 @@ md.use(anchor, {
   slugify,
 })
 
+/**
+ * markdown-it percent-encodes non-ASCII image URLs. Decode a local path before
+ * passing it to Tauri so `convertFileSrc` encodes the real filename exactly once.
+ */
+function decodeLocalImagePath(src: string): string {
+  try {
+    return decodeURIComponent(src)
+  } catch {
+    // Keep malformed escape sequences untouched so rendering does not fail.
+    return src
+  }
+}
+
+function resolveLocalImagePath(src: string, filePath: string): string | null {
+  if (/^(?:https?:\/\/|data:|file:|asset:)/i.test(src)) return null
+  if (src.startsWith('/')) return null
+
+  const decoded = decodeLocalImagePath(src).replace(/\//g, '\\')
+  if (/^[A-Za-z]:\\/.test(decoded) || decoded.startsWith('\\\\')) return decoded
+  if (decoded.startsWith('\\')) return null
+
+  const dir = filePath.split('\\').slice(0, -1).join('\\')
+  return `${dir}\\${decoded}`
+}
+
 export function renderMarkdown(content: string, filePath?: string): string {
   const html = md.render(content)
   let processed = html
 
   if (filePath) {
-    const dir = filePath.split('\\').slice(0, -1).join('\\')
     processed = processed.replace(
-      /(<img[^>]+src=")(?!https?:\/\/)([^"]+)(")/g,
+      /(<img[^>]+src=")([^"]+)(")/g,
       (_, prefix, src: string, suffix) => {
-        if (src.startsWith('/') || src.startsWith('data:') || src.startsWith('file:')) return _
-        const fullPath = `${dir}\\${src.replace(/\//g, '\\')}`
+        const fullPath = resolveLocalImagePath(src, filePath)
+        if (!fullPath) return _
         return `${prefix}${convertFileSrc(fullPath)}${suffix}`
       }
     )
@@ -62,12 +86,11 @@ export function renderEditableMarkdown(content: string, filePath?: string): stri
   let html = editableMd.render(content)
 
   if (filePath) {
-    const dir = filePath.split('\\').slice(0, -1).join('\\')
     html = html.replace(
       /(<img[^>]+src=")([^"]+)(")/g,
       (match: string, prefix: string, src: string, suffix: string) => {
-        if (/^(?:https?:\/\/|data:|file:|asset:|\/|\\)/i.test(src)) return match
-        const fullPath = `${dir}\\${src.replace(/\//g, '\\')}`
+        const fullPath = resolveLocalImagePath(src, filePath)
+        if (!fullPath) return match
         return `${prefix}${convertFileSrc(fullPath)}${suffix} data-md-src="${src}"`
       }
     )
